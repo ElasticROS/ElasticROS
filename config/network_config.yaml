@@ -1,0 +1,336 @@
+# ElasticROS Network Configuration
+
+# Network monitoring settings
+monitoring:
+  # Target host for latency measurements
+  latency_target: "8.8.8.8"
+  
+  # Alternative targets for redundancy
+  latency_targets:
+    - "8.8.8.8"        # Google DNS
+    - "1.1.1.1"        # Cloudflare DNS
+    - "208.67.222.222" # OpenDNS
+    
+  # Bandwidth test configuration
+  bandwidth_test:
+    # Test interval in seconds (0 to disable)
+    interval: 300
+    
+    # Test duration in seconds
+    duration: 5
+    
+    # Test servers (speedtest.net compatible)
+    servers:
+      - auto  # Auto-select best server
+      # - 1234  # Specific server ID
+    
+    # Cache duration for bandwidth results
+    cache_duration: 300
+    
+  # Monitoring intervals
+  intervals:
+    latency: 5.0      # Check latency every 5 seconds
+    bandwidth: 300.0  # Check bandwidth every 5 minutes
+    packet_loss: 30.0 # Check packet loss every 30 seconds
+
+# Network optimization settings
+optimization:
+  # TCP optimizations
+  tcp:
+    # Enable TCP no delay (disable Nagle's algorithm)
+    nodelay: true
+    
+    # TCP keepalive settings
+    keepalive:
+      enabled: true
+      idle: 60      # seconds before sending keepalive
+      interval: 10  # seconds between keepalives
+      count: 3      # number of keepalives before timeout
+      
+    # Socket buffer sizes (bytes)
+    send_buffer: 262144    # 256 KB
+    receive_buffer: 262144 # 256 KB
+    
+  # UDP settings (for ROS2 DDS)
+  udp:
+    # Buffer sizes
+    send_buffer: 262144
+    receive_buffer: 262144
+    
+    # Multicast settings
+    multicast:
+      enabled: true
+      ttl: 1  # Time to live for multicast packets
+      
+  # Quality of Service
+  qos:
+    # DDS QoS profile for ROS2
+    dds_profile: "elasticros_default"
+    
+    # Priority levels (0-255, higher is more important)
+    priorities:
+      control: 200      # Control messages
+      sensor_data: 150  # Real-time sensor data
+      cloud_data: 100   # Cloud computation data
+      monitoring: 50    # Monitoring and logs
+
+# Data compression settings
+compression:
+  # Enable compression for cloud transfers
+  enabled: true
+  
+  # Compression algorithm
+  algorithm: "zlib"  # Options: zlib, gzip, lz4, snappy
+  
+  # Compression level (1-9, higher = better compression but slower)
+  level: 6
+  
+  # Minimum data size to compress (bytes)
+  min_size: 1024  # 1 KB
+  
+  # Per-data-type settings
+  types:
+    image:
+      algorithm: "jpeg"  # Use JPEG for images
+      quality: 85        # JPEG quality (1-100)
+      
+    pointcloud:
+      algorithm: "zlib"
+      level: 7
+      
+    audio:
+      algorithm: "opus"  # Audio codec
+      bitrate: 64000    # bits per second
+
+# Bandwidth management
+bandwidth_control:
+  # Enable adaptive bandwidth management
+  enabled: true
+  
+  # Bandwidth limits (Mbps, 0 = unlimited)
+  limits:
+    upload: 0
+    download: 0
+    
+  # Adaptive limits based on available bandwidth
+  adaptive:
+    # Reserve bandwidth for other applications (%)
+    reserve_percent: 20
+    
+    # Minimum guaranteed bandwidth (Mbps)
+    min_bandwidth: 1.0
+    
+    # Maximum bandwidth to use (Mbps)
+    max_bandwidth: 100.0
+    
+  # Traffic shaping
+  shaping:
+    # Enable traffic shaping
+    enabled: false
+    
+    # Shaping algorithm
+    algorithm: "htb"  # Hierarchical Token Bucket
+    
+    # Class priorities
+    classes:
+      - name: "realtime"
+        priority: 1
+        guaranteed_rate: "10mbit"
+        max_rate: "50mbit"
+        
+      - name: "elastic"
+        priority: 2
+        guaranteed_rate: "5mbit"
+        max_rate: "30mbit"
+        
+      - name: "background"
+        priority: 3
+        guaranteed_rate: "1mbit"
+        max_rate: "10mbit"
+
+# Network interfaces
+interfaces:
+  # Primary interface (auto-detect if null)
+  primary: null
+  
+  # Interface priorities (first available is used)
+  priority_order:
+    - "eth0"    # Ethernet
+    - "wlan0"   # WiFi
+    - "usb0"    # USB tethering
+    - "ppp0"    # Mobile data
+    
+  # Per-interface settings
+  settings:
+    eth0:
+      mtu: 1500
+      preferred: true
+      
+    wlan0:
+      mtu: 1500
+      preferred: false
+      # WiFi-specific settings
+      wifi:
+        power_save: false
+        
+# VPN configuration
+vpn:
+  # Enable VPN for robot-cloud communication
+  enabled: false
+  
+  # VPN type
+  type: "openvpn"  # Options: openvpn, wireguard, ipsec
+  
+  # Auto-connect on startup
+  auto_connect: true
+  
+  # Connection settings
+  connection:
+    # Server address
+    server: "vpn.elasticros.com"
+    
+    # Port
+    port: 1194
+    
+    # Protocol
+    protocol: "udp"  # Options: udp, tcp
+    
+    # Cipher
+    cipher: "AES-256-CBC"
+    
+  # Certificate paths
+  certificates:
+    ca: "~/.elasticros/vpn/ca.crt"
+    cert: "~/.elasticros/vpn/client.crt"
+    key: "~/.elasticros/vpn/client.key"
+    
+  # Reconnection settings
+  reconnect:
+    enabled: true
+    max_attempts: 5
+    delay: 10  # seconds
+
+# Firewall settings
+firewall:
+  # Enable firewall rules management
+  enabled: false
+  
+  # Default policy
+  default_policy: "allow"  # Options: allow, deny
+  
+  # Rules (processed in order)
+  rules:
+    # Allow ROS communication
+    - action: "allow"
+      protocol: "tcp"
+      port: 11311
+      source: "10.0.0.0/16"
+      comment: "ROS Master"
+      
+    # Allow ROS2 DDS
+    - action: "allow"
+      protocol: "udp"
+      port_range: "7400-7500"
+      source: "10.0.0.0/16"
+      comment: "ROS2 DDS Discovery"
+      
+    # Allow SSH
+    - action: "allow"
+      protocol: "tcp"
+      port: 22
+      source: "any"
+      comment: "SSH Access"
+      
+    # Allow ElasticROS cloud communication
+    - action: "allow"
+      protocol: "tcp"
+      port_range: "8080-8090"
+      source: "any"
+      comment: "ElasticROS Cloud"
+
+# Network diagnostics
+diagnostics:
+  # Enable network diagnostics
+  enabled: true
+  
+  # Diagnostic tests
+  tests:
+    # Connectivity test
+    connectivity:
+      enabled: true
+      targets:
+        - "8.8.8.8"
+        - "aws.amazon.com"
+        
+    # DNS resolution test
+    dns:
+      enabled: true
+      domains:
+        - "google.com"
+        - "aws.amazon.com"
+        
+    # Bandwidth test
+    bandwidth:
+      enabled: true
+      min_download: 1.0  # Mbps
+      min_upload: 0.5    # Mbps
+      
+    # Latency test
+    latency:
+      enabled: true
+      max_latency: 200  # ms
+      
+    # Packet loss test
+    packet_loss:
+      enabled: true
+      max_loss: 5  # percent
+      
+  # Alert thresholds
+  alerts:
+    # Send alerts when thresholds exceeded
+    enabled: true
+    
+    # Alert methods
+    methods:
+      - "log"    # Log to file
+      - "ros"    # Publish to ROS topic
+      # - "email"  # Email notification
+      
+    # Thresholds
+    thresholds:
+      bandwidth_drop: 50    # % drop from baseline
+      latency_spike: 500    # ms
+      packet_loss: 10       # %
+      connection_loss: true # Alert on connection loss
+
+# Cloud endpoint configuration
+cloud_endpoints:
+  # Primary cloud endpoint
+  primary:
+    region: "us-east-1"
+    endpoint: "elasticros.us-east-1.amazonaws.com"
+    port: 443
+    protocol: "https"
+    
+  # Fallback endpoints
+  fallback:
+    - region: "us-west-2"
+      endpoint: "elasticros.us-west-2.amazonaws.com"
+      port: 443
+      protocol: "https"
+      
+    - region: "eu-west-1"
+      endpoint: "elasticros.eu-west-1.amazonaws.com"
+      port: 443
+      protocol: "https"
+      
+  # Endpoint selection
+  selection:
+    # Selection method
+    method: "latency"  # Options: latency, round-robin, geographic
+    
+    # Latency threshold for switching (ms)
+    switch_threshold: 100
+    
+    # Health check interval (seconds)
+    health_check_interval: 30

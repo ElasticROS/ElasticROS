@@ -1,0 +1,335 @@
+# ElasticROS EC2 Instance Template
+# This template defines configurations for different types of EC2 instances
+
+# Default configuration
+default:
+  # Basic instance settings
+  instance_type: t2.micro
+  ami_id: null  # Auto-detect Ubuntu 20.04 LTS
+  key_name: elasticros-key
+  
+  # Storage
+  block_device_mappings:
+    - device_name: /dev/sda1
+      ebs:
+        volume_size: 30  # GB
+        volume_type: gp3
+        delete_on_termination: true
+        
+  # Network settings
+  network_interfaces:
+    - device_index: 0
+      associate_public_ip_address: true
+      delete_on_termination: true
+      
+  # Monitoring
+  monitoring:
+    enabled: true
+    
+  # Tags
+  tags:
+    Name: ElasticROS-Instance
+    ElasticROS: "true"
+    Environment: production
+    
+
+# Task-specific configurations
+configurations:
+  
+  # For general computation tasks
+  general_compute:
+    instance_type: t3.medium
+    tags:
+      Name: ElasticROS-GeneralCompute
+      TaskType: general
+      
+  # For image processing tasks
+  image_processing:
+    instance_type: g4dn.xlarge  # GPU instance
+    ami_id: null  # Deep Learning AMI
+    block_device_mappings:
+      - device_name: /dev/sda1
+        ebs:
+          volume_size: 50
+          volume_type: gp3
+    tags:
+      Name: ElasticROS-ImageProcessing
+      TaskType: vision
+      GPU: "true"
+      
+  # For machine learning inference
+  ml_inference:
+    instance_type: inf1.xlarge  # AWS Inferentia
+    ami_id: null  # Deep Learning AMI with Neuron SDK
+    tags:
+      Name: ElasticROS-MLInference
+      TaskType: inference
+      Accelerator: inferentia
+      
+  # For speech/audio processing
+  speech_processing:
+    instance_type: c5.xlarge  # Compute optimized
+    tags:
+      Name: ElasticROS-SpeechProcessing
+      TaskType: audio
+      
+  # For SLAM and mapping
+  slam_mapping:
+    instance_type: m5.xlarge  # Memory optimized
+    block_device_mappings:
+      - device_name: /dev/sda1
+        ebs:
+          volume_size: 100
+          volume_type: gp3
+    tags:
+      Name: ElasticROS-SLAM
+      TaskType: mapping
+      
+  # For development and testing
+  development:
+    instance_type: t2.small
+    tags:
+      Name: ElasticROS-Dev
+      Environment: development
+      
+
+# User data scripts for different configurations
+user_data_scripts:
+  
+  base: |
+    #!/bin/bash
+    set -e
+    
+    # Update system
+    apt-get update
+    apt-get upgrade -y
+    
+    # Install basic dependencies
+    apt-get install -y \
+        python3-pip \
+        python3-dev \
+        git \
+        wget \
+        curl \
+        build-essential \
+        cmake
+        
+    # Install Docker
+    curl -fsSL https://get.docker.com -o get-docker.sh
+    sh get-docker.sh
+    usermod -aG docker ubuntu
+    
+    # Install ElasticROS
+    pip3 install elasticros
+    
+    # Setup logging
+    mkdir -p /var/log/elasticros
+    
+    # Configure system limits
+    echo "* soft nofile 65536" >> /etc/security/limits.conf
+    echo "* hard nofile 65536" >> /etc/security/limits.conf
+    
+    # Enable core dumps
+    echo "* soft core unlimited" >> /etc/security/limits.conf
+    
+  ros_noetic: |
+    # Install ROS Noetic
+    sh -c 'echo "deb http://packages.ros.org/ros/ubuntu $(lsb_release -sc) main" > /etc/apt/sources.list.d/ros-latest.list'
+    curl -s https://raw.githubusercontent.com/ros/rosdistro/master/ros.asc | apt-key add -
+    apt-get update
+    apt-get install -y ros-noetic-ros-base python3-rosdep
+    
+    # Initialize rosdep
+    rosdep init || true
+    sudo -u ubuntu rosdep update
+    
+    # Setup ROS environment
+    echo "source /opt/ros/noetic/setup.bash" >> /home/ubuntu/.bashrc
+    
+  ros2_humble: |
+    # Install ROS2 Humble
+    apt-get install -y software-properties-common
+    add-apt-repository universe
+    
+    curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key -o /usr/share/keyrings/ros-archive-keyring.gpg
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros2/ubuntu $(. /etc/os-release && echo $UBUNTU_CODENAME) main" | tee /etc/apt/sources.list.d/ros2.list > /dev/null
+    
+    apt-get update
+    apt-get install -y ros-humble-ros-base python3-colcon-common-extensions
+    
+    # Setup ROS2 environment
+    echo "source /opt/ros/humble/setup.bash" >> /home/ubuntu/.bashrc
+    
+  gpu_setup: |
+    # Install NVIDIA drivers and CUDA
+    wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/cuda-keyring_1.0-1_all.deb
+    dpkg -i cuda-keyring_1.0-1_all.deb
+    apt-get update
+    apt-get install -y cuda
+    
+    # Install cuDNN
+    # Note: Requires manual download due to licensing
+    
+    # Install nvidia-docker
+    distribution=$(. /etc/os-release;echo $ID$VERSION_ID)
+    curl -s -L https://nvidia.github.io/nvidia-docker/gpgkey | apt-key add -
+    curl -s -L https://nvidia.github.io/nvidia-docker/$distribution/nvidia-docker.list | tee /etc/apt/sources.list.d/nvidia-docker.list
+    apt-get update
+    apt-get install -y nvidia-docker2
+    systemctl restart docker
+    
+  ml_libraries: |
+    # Install ML libraries
+    pip3 install torch torchvision torchaudio
+    pip3 install tensorflow
+    pip3 install onnx onnxruntime
+    
+  monitoring: |
+    # Install monitoring tools
+    apt-get install -y htop iotop sysstat
+    
+    # Install Prometheus node exporter
+    wget https://github.com/prometheus/node_exporter/releases/download/v1.3.1/node_exporter-1.3.1.linux-amd64.tar.gz
+    tar xvfz node_exporter-1.3.1.linux-amd64.tar.gz
+    cp node_exporter-1.3.1.linux-amd64/node_exporter /usr/local/bin/
+    
+    # Create systemd service
+    cat > /etc/systemd/system/node_exporter.service << EOF
+    [Unit]
+    Description=Node Exporter
+    After=network.target
+    
+    [Service]
+    Type=simple
+    User=nobody
+    Group=nogroup
+    ExecStart=/usr/local/bin/node_exporter
+    
+    [Install]
+    WantedBy=multi-user.target
+    EOF
+    
+    systemctl daemon-reload
+    systemctl enable node_exporter
+    systemctl start node_exporter
+    
+  elasticros_service: |
+    # Create ElasticROS release node service
+    cat > /etc/systemd/system/elasticros-release.service << EOF
+    [Unit]
+    Description=ElasticROS Release Node
+    After=network.target
+    
+    [Service]
+    Type=simple
+    User=ubuntu
+    Group=ubuntu
+    WorkingDirectory=/home/ubuntu
+    Environment="PATH=/usr/local/bin:/usr/bin:/bin"
+    ExecStart=/usr/local/bin/elasticros-release-node
+    Restart=always
+    RestartSec=10
+    
+    [Install]
+    WantedBy=multi-user.target
+    EOF
+    
+    # Create startup script
+    cat > /usr/local/bin/elasticros-release-node << 'EOF'
+    #!/bin/bash
+    source /home/ubuntu/.bashrc
+    
+    # Wait for network
+    while ! ping -c 1 google.com &> /dev/null; do
+        sleep 1
+    done
+    
+    # Start release node
+    python3 -m elasticros_core.release_node_server
+    EOF
+    
+    chmod +x /usr/local/bin/elasticros-release-node
+    
+    systemctl daemon-reload
+    systemctl enable elasticros-release
+    systemctl start elasticros-release
+
+
+# Security group rules
+security_group_rules:
+  ingress:
+    # SSH
+    - protocol: tcp
+      from_port: 22
+      to_port: 22
+      cidr_blocks: ["0.0.0.0/0"]  # Restrict in production
+      
+    # ROS Master
+    - protocol: tcp
+      from_port: 11311
+      to_port: 11311
+      cidr_blocks: ["10.0.0.0/16"]
+      
+    # ROS2 DDS
+    - protocol: udp
+      from_port: 7400
+      to_port: 7500
+      cidr_blocks: ["10.0.0.0/16"]
+      
+    # ElasticROS communication
+    - protocol: tcp
+      from_port: 8080
+      to_port: 8090
+      cidr_blocks: ["10.0.0.0/16"]
+      
+    # Prometheus metrics
+    - protocol: tcp
+      from_port: 9100
+      to_port: 9100
+      cidr_blocks: ["10.0.0.0/16"]
+      
+  egress:
+    # Allow all outbound
+    - protocol: -1
+      from_port: 0
+      to_port: 0
+      cidr_blocks: ["0.0.0.0/0"]
+
+
+# IAM role policies
+iam_policies:
+  - name: ElasticROSInstancePolicy
+    policy_document:
+      Version: "2012-10-17"
+      Statement:
+        # S3 access for models and data
+        - Effect: Allow
+          Action:
+            - s3:GetObject
+            - s3:PutObject
+            - s3:ListBucket
+          Resource:
+            - "arn:aws:s3:::elasticros-*/*"
+            
+        # CloudWatch logs
+        - Effect: Allow
+          Action:
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+          Resource: "*"
+          
+        # EC2 metadata
+        - Effect: Allow
+          Action:
+            - ec2:DescribeInstances
+            - ec2:DescribeTags
+          Resource: "*"
+          
+        # Systems Manager (for remote management)
+        - Effect: Allow
+          Action:
+            - ssm:UpdateInstanceInformation
+            - ssm:ListAssociations
+            - ssm:ListInstanceAssociations
+          Resource: "*"
