@@ -1,0 +1,80 @@
+# Configuration for Speech Recognition Example
+
+# Elastic Node settings
+elastic_node:
+  optimization_metric: "latency"
+  context_dim: 10
+  gamma: 1.0
+  beta_multiplier: 1.0
+  force_sample_rate: 0.1
+  
+  # Action space optimized for audio processing
+  action_space:
+    - press_ratio: 1.0
+      release_ratio: 0.0
+      description: "Full local - for low latency response"
+      
+    - press_ratio: 0.7
+      release_ratio: 0.3
+      description: "Local VAD + feature extraction, cloud ASR"
+      
+    - press_ratio: 0.3
+      release_ratio: 0.7
+      description: "Basic preprocessing + cloud ASR"
+      
+    - press_ratio: 0.0
+      release_ratio: 1.0
+      description: "Full cloud - for resource constrained robots"
+
+# Speech recognition specific settings
+speech_recognition:
+  # Audio settings
+  sample_rate: 16000
+  chunk_duration: 2.0  # seconds
+  
+  # Voice Activity Detection
+  vad:
+    energy_threshold: 0.01
+    silence_frames: 20
+    
+  # Feature extraction
+  features:
+    frame_size: 512
+    mel_bins: 128
+    mfcc_coeffs: 13
+    
+  # Model settings (for real implementation)
+  model:
+    name: "whisper_small"  # or "wav2vec2"
+    language: "en"
+    device: "cuda"  # or "cpu"
+
+# Performance thresholds  
+thresholds:
+  # Maximum latency for interactive dialogue (ms)
+  max_latency: 300
+  
+  # CPU threshold for offloading
+  max_cpu_usage: 60
+  
+  # Memory threshold
+  max_memory_usage: 80
+
+# Audio capture settings
+audio_capture:
+  # Input device (null for default)
+  device: null
+  
+  # Buffer settings
+  chunk_size: 1024
+  buffer_size: 10  # seconds
+  
+# Response generation (for full dialogue system)
+response:
+  # Enable response generation
+  enabled: false
+  
+  # TTS settings
+  tts:
+    voice: "en-US-Standard-A"
+    speed: 1.0

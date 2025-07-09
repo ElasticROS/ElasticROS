@@ -1,0 +1,46 @@
+# Core dependencies
+numpy>=1.19.0,<2.0.0
+scipy>=1.5.0
+matplotlib>=3.3.0
+pandas>=1.1.0
+
+# AWS integration
+boto3>=1.17.0
+botocore>=1.20.0
+
+# Configuration and utilities
+pyyaml>=5.3.0
+psutil>=5.7.0
+netifaces>=0.10.9
+
+# Networking
+paramiko>=2.7.0
+cryptography>=3.0
+requests>=2.25.0
+
+# ROS Python packages (install via rosdep for ROS1)
+# rospkg>=1.2.0  # Uncomment if not using ROS installation
+# rospy>=1.15.0  # Uncomment if not using ROS installation
+
+# Performance monitoring
+py-cpuinfo>=7.0.0
+GPUtil>=1.4.0
+
+# Logging and debugging
+colorlog>=4.6.0
+tqdm>=4.50.0
+
+# Testing (optional)
+pytest>=6.0.0
+pytest-cov>=2.10.0
+pytest-asyncio>=0.14.0
+
+# Code quality (optional)
+black>=20.8b1
+flake8>=3.8.0
+mypy>=0.790
+
+# ML frameworks (optional, for examples)
+# torch>=1.9.0
+# torchvision>=0.10.0
+# tensorflow>=2.6.0

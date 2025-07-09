@@ -1,0 +1,87 @@
+# ElasticROS Default Configuration
+
+# Elastic Node Configuration
+elastic_node:
+  # Optimization metric: latency, cpu, power, throughput
+  optimization_metric: "latency"
+  
+  # Context vector dimension
+  context_dim: 10
+  
+  # Algorithm parameters
+  gamma: 1.0
+  beta_multiplier: 1.0
+  force_sample_rate: 0.1
+  
+  # Action space - defines possible computation distributions
+  action_space:
+    - press_ratio: 1.0
+      release_ratio: 0.0
+      description: "Full local computation"
+      
+    - press_ratio: 0.7
+      release_ratio: 0.3
+      description: "Mostly local with cloud assist"
+      
+    - press_ratio: 0.5
+      release_ratio: 0.5
+      description: "Balanced distribution"
+      
+    - press_ratio: 0.3
+      release_ratio: 0.7
+      description: "Mostly cloud with local preprocessing"
+      
+    - press_ratio: 0.0
+      release_ratio: 1.0
+      description: "Full cloud computation"
+
+# Network Configuration
+network:
+  # Target host for latency measurements
+  latency_target: "8.8.8.8"
+  
+  # Bandwidth test interval (seconds)
+  bandwidth_test_interval: 300
+  
+  # Network interface (auto-detect if null)
+  interface: null
+  
+  # Compression level (0-9)
+  compression_level: 6
+
+# Metrics Collection
+metrics:
+  # Monitoring interval (seconds)
+  monitor_interval: 1.0
+  
+  # History size (number of data points)
+  history_size: 100
+  
+  # Enable GPU monitoring
+  monitor_gpu: true
+
+# Performance Thresholds
+thresholds:
+  # Maximum acceptable latency (ms)
+  max_latency: 1000
+  
+  # Minimum required bandwidth (Mbps)
+  min_bandwidth: 1.0
+  
+  # Maximum CPU usage before offloading (%)
+  max_cpu_usage: 80
+  
+  # Maximum memory usage before offloading (%)
+  max_memory_usage: 90
+
+# Logging Configuration
+logging:
+  # Log level: DEBUG, INFO, WARNING, ERROR
+  level: "INFO"
+  
+  # Log to file
+  log_to_file: true
+  log_file: "elasticros.log"
+  
+  # Console output
+  console_output: true

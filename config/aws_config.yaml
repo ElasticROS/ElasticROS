@@ -1,0 +1,115 @@
+# AWS Configuration for ElasticROS
+
+# AWS Region
+region: "us-east-1"
+
+# EC2 Instance Configuration
+ec2:
+  # Default instance type
+  instance_type: "t2.micro"
+  
+  # GPU instance type (when GPU is needed)
+  gpu_instance_type: "g4dn.xlarge"
+  
+  # AMI ID (leave null to auto-detect Ubuntu)
+  ami_id: null
+  
+  # SSH key pair name
+  key_name: "elasticros-key"
+  
+  # Instance storage (GB)
+  storage_size: 30
+  
+  # Maximum number of instances
+  max_instances: 5
+
+# VPC Configuration
+vpc:
+  # VPC CIDR block
+  cidr_block: "10.0.0.0/16"
+  
+  # Subnet configuration
+  subnets:
+    public:
+      cidr_block: "10.0.1.0/24"
+      availability_zone: null  # Auto-select
+      
+    private:
+      cidr_block: "10.0.2.0/24"
+      availability_zone: null  # Auto-select
+
+# Security Configuration
+security:
+  # Security group name
+  security_group_name: "elasticros-sg"
+  
+  # Allowed ports
+  allowed_ports:
+    ssh: 22
+    ros_master: 11311
+    ros2_dds: [7400, 7410]  # DDS discovery ports
+    
+  # Allowed IP ranges (CIDR)
+  allowed_ips:
+    ssh: "0.0.0.0/0"  # WARNING: Open to all, restrict in production
+    internal: "10.0.0.0/16"
+
+# Auto-scaling Configuration
+autoscaling:
+  # Enable auto-scaling
+  enabled: false
+  
+  # Minimum instances
+  min_instances: 1
+  
+  # Maximum instances
+  max_instances: 3
+  
+  # Scale-up threshold (CPU %)
+  scale_up_threshold: 80
+  
+  # Scale-down threshold (CPU %)
+  scale_down_threshold: 20
+
+# User Data Script (cloud-init)
+user_data_script: |
+  #!/bin/bash
+  
+  # Update system
+  apt-get update
+  apt-get upgrade -y
+  
+  # Install Python and pip
+  apt-get install -y python3-pip python3-dev
+  
+  # Install ElasticROS
+  pip3 install elasticros
+  
+  # Install ROS dependencies (for ROS nodes)
+  # Uncomment based on ROS version needed
+  
+  # For ROS Noetic:
+  # sh -c 'echo "deb http://packages.ros.org/ros/ubuntu $(lsb_release -sc) main" > /etc/apt/sources.list.d/ros-latest.list'
+  # curl -s https://raw.githubusercontent.com/ros/rosdistro/master/ros.asc | apt-key add -
+  # apt-get update
+  # apt-get install -y ros-noetic-ros-base
+  
+  # For ROS2 Humble:
+  # curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key -o /usr/share/keyrings/ros-archive-keyring.gpg
+  # echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros2/ubuntu $(lsb_release -cs) main" | tee /etc/apt/sources.list.d/ros2.list > /dev/null
+  # apt-get update
+  # apt-get install -y ros-humble-ros-base
+  
+  # Start ElasticROS release node service
+  # systemctl start elasticros-release
+
+# Cost Management
+cost_management:
+  # Maximum hourly spend ($)
+  max_hourly_spend: 1.0
+  
+  # Use spot instances when possible
+  use_spot_instances: false
+  
+  # Spot price limit ($ per hour)
+  spot_price_limit: 0.10

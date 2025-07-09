@@ -1,0 +1,87 @@
+<launch>
+  <!-- ElasticROS Launch File -->
+  
+  <!-- Arguments -->
+  <arg name="config" default="$(find elasticros_ros)/config/default_config.yaml" />
+  <arg name="cloud_provider" default="aws" />
+  <arg name="instance_type" default="t2.micro" />
+  <arg name="use_gpu" default="false" />
+  <arg name="namespace" default="elasticros" />
+  
+  <!-- Load configuration -->
+  <rosparam file="$(arg config)" command="load" ns="$(arg namespace)" />
+  
+  <!-- Launch Elastic Node (master controller) -->
+  <node name="elastic_node" pkg="elasticros_ros" type="elastic_node_ros.py" 
+        output="screen" ns="$(arg namespace)">
+    <param name="config_file" value="$(arg config)" />
+  </node>
+  
+  <!-- Example: Launch image processing nodes -->
+  <group if="$(eval arg('example') == 'image_processing')">
+    <!-- Press Node (local) -->
+    <node name="image_press_node" pkg="elasticros_ros" type="image_press_node.py"
+          output="screen" ns="$(arg namespace)">
+      <remap from="image_raw" to="/camera/image_raw" />
+      <remap from="image_processed" to="~image_processed" />
+    </node>
+    
+    <!-- Release Node parameters (will be launched in cloud) -->
+    <rosparam ns="$(arg namespace)/release_nodes">
+      image_release_node:
+        package: elasticros_ros
+        executable: image_release_node.py
+        instance_type: $(arg instance_type)
+        use_gpu: $(arg use_gpu)
+        remappings:
+          - from: "image_input"
+            to: "/elasticros/image_press_node/image_processed"
+          - from: "detections"
+            to: "/elasticros/detections"
+    </rosparam>
+  </group>
+  
+  <!-- Example: Launch speech recognition nodes -->
+  <group if="$(eval arg('example') == 'speech')">
+    <!-- Press Node (local) -->
+    <node name="speech_press_node" pkg="elasticros_ros" type="speech_press_node.py"
+          output="screen" ns="$(arg namespace)">
+      <remap from="audio_raw" to="/microphone/audio" />
+      <remap from="audio_features" to="~audio_features" />
+    </node>
+    
+    <!-- Release Node parameters -->
+    <rosparam ns="$(arg namespace)/release_nodes">
+      speech_release_node:
+        package: elasticros_ros
+        executable: speech_release_node.py
+        instance_type: t2.small
+        use_gpu: false
+        remappings:
+          - from: "audio_input"
+            to: "/elasticros/speech_press_node/audio_features"
+          - from: "transcription"
+            to: "/elasticros/transcription"
+    </rosparam>
+  </group>
+  
+  <!-- Cloud Manager Node -->
+  <node name="cloud_manager" pkg="elasticros_ros" type="cloud_manager.py"
+        output="screen" ns="$(arg namespace)">
+    <param name="provider" value="$(arg cloud_provider)" />
+    <param name="auto_shutdown" value="true" />
+    <param name="idle_timeout" value="300" /> <!-- 5 minutes -->
+  </node>
+  
+  <!-- Monitoring and Visualization -->
+  <node name="performance_monitor" pkg="elasticros_ros" type="performance_monitor.py"
+        output="screen" ns="$(arg namespace)">
+    <param name="publish_rate" value="1.0" />
+  </node>
+  
+  <!-- Optional: RViz for visualization -->
+  <node name="rviz" pkg="rviz" type="rviz" 
+        args="-d $(find elasticros_ros)/config/elasticros.rviz"
+        if="$(arg visualize)" />
+        
+</launch>
