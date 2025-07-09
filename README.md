@@ -114,4 +114,3 @@ We welcome contributions! Please see CONTRIBUTING.md for guidelines.
 ## Contact
 
 - Issues: https://github.com/ElasticROS/elasticros/issues
-- Email: elasticros@example.com
