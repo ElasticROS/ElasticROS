@@ -103,19 +103,6 @@ See the `examples/` directory for:
 
 Full documentation available at: https://github.com/ElasticROS/elasticros/wiki
 
-## Citation
-
-If you use ElasticROS in your research, please cite:
-
-```bibtex
-@inproceedings{elasticros2025,
-  title={ElasticROS: An Open-Source System for Algorithm-Level Elastic Computing as an IoRT Tool},
-  author={Your Name},
-  booktitle={SenSys '25},
-  year={2025}
-}
-```
-
 ## License
 
 MIT License - see LICENSE file for details.
